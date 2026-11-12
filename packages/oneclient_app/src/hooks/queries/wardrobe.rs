@@ -171,10 +171,7 @@ async fn fresh_account(id: Uuid) -> Result<MinecraftAccount, String> {
         .account_for_launch(id)
         .await
         .map_err(|err| err.to_string())?;
-    if !account.is_microsoft() {
-        return Err(t("oneclient.wardrobe.account.signed_out").into());
-    }
-    if account.needs_sign_in() || account.access_token.is_empty() {
+    if account.is_microsoft() && (account.needs_sign_in() || account.access_token.is_empty()) {
         return Err(t("oneclient.wardrobe.account.needs_sign_in").into());
     }
     Ok(account)

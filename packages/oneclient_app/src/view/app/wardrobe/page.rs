@@ -785,11 +785,10 @@ impl Component for Wardrobe {
         let account = try_default_account(&current);
 
         let body = match account {
-            Some(account) if account.is_microsoft() => WardrobeBody {
+            Some(account) => WardrobeBody {
                 account: account.id,
             }
             .into_element(),
-            Some(_) => centered_note(t("oneclient.wardrobe.account.not_microsoft")),
             None if query_is_loading(&current) => {
                 centered_spinner(t("oneclient.wardrobe.account.loading"))
             }

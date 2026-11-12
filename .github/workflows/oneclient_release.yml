@@ -153,6 +153,15 @@ jobs:
         shell: bash
         run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deployment_target }}" >> "$GITHUB_ENV"
 
+      # Defender scans every object cargo writes; excluding the build tree is
+      # one of the largest wall-clock wins on windows-latest.
+      - name: (Windows) Exclude build tree from Defender
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          Add-MpPreference -ExclusionPath "${{ github.workspace }}\\target" -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionPath "$env:CARGO_HOME" -ErrorAction SilentlyContinue
+
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
@@ -321,6 +330,14 @@ jobs:
               exit 1
             }
           }
+
+      # cargo-packager re-downloads NSIS and its other tools on a cold runner.
+      - name: (Windows) Cache packager tools
+        if: matrix.platform == 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.localappdata }}\cargo-packager
+          key: cargo-packager-tools-windows-v1
 
       - name: Package
         shell: bash

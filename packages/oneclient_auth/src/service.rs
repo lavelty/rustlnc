@@ -387,10 +387,8 @@ impl AuthService {
             Err(err) => return Err(err),
         };
 
-        if account.is_offline() && !self.has_microsoft_account().await {
-            return Err(AuthError::OfflineRequiresMicrosoft);
-        }
-
+        // Offline accounts play without any Microsoft account on the profile:
+        // there is nothing to renew and nothing to gate here.
         Ok(account)
     }
 

@@ -32,6 +32,20 @@ impl QueryCapability for OnboardingBundlesQuery {
     async fn run(&self, _keys: &Self::Keys) -> Result<Self::Ok, Self::Err> {
         let state = crate::launcher::state()?;
         off_ui(async move {
+            // The onboarding mod step is the first screen that needs the bundle
+            // catalog. On a fresh data directory the startup sync may not have
+            // finished (or may not have run at all), which left the step with no
+            // clusters and therefore nothing to show. Sync here when the catalog
+            // has never been populated, then provision the bundle clusters.
+            if state.bundles.catalog_revision() == 0 {
+                if let Err(err) = state.bundles.sync(&state.services.content()).await {
+                    tracing::warn!("onboarding bundle sync failed: {err:#}");
+                }
+                if let Err(err) = oneclient_core::clusters::ensure_from_bundles(&state).await {
+                    tracing::warn!("onboarding bundle provisioning failed: {err:#}");
+                }
+            }
+
             let clusters = state.clusters.list().await?;
 
             let mut out = Vec::with_capacity(clusters.len());

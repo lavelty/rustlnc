@@ -1,0 +1,51 @@
+name: Neutro Windows Build (patched)
+
+# Yalnızca Windows için yamalı (hesap kapısı kaldırılmış) build üretir.
+# Runner'da Visual Studio + Windows SDK hazır olduğu için Skia/Freya derlenebilir.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: neutro-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_PROFILE_RELEASE_LTO: thin
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '16'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          save-cache: true
+          restore-cache: true
+          cache-namespace: neutro-windows-cache
+
+      - name: Build (release)
+        run: cargo build -p oneclient_app --release
+
+      - name: Bundle CRT DLLs
+        if: ${{ hashFiles('distribution/windows/bundle-crt.py') != '' }}
+        shell: pwsh
+        run: python distribution/windows/bundle-crt.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neutro-oneclient-windows
+          if-no-files-found: error
+          path: |
+            target/release/oneclient_app.exe
+            target/release/*.dll
